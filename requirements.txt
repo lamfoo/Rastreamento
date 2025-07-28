@@ -1,0 +1,10 @@
+Django>=4.0
+channels
+djangorestframework
+django-cors-headers
+django-filter
+psycopg2-binary
+reportlab
+pandas
+django-crispy-forms
+crispy-bootstrap5
