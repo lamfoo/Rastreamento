@@ -23,8 +23,14 @@ def profile_view(request):
         messages.success(request, 'Perfil atualizado com sucesso!')
         return redirect('accounts:profile')
     
+    # Calcular viagens concluídas para motoristas
+    completed_trips_count = 0
+    if request.user.user_type == 'driver':
+        completed_trips_count = request.user.trips.filter(status='completed').count()
+    
     context = {
         'user': request.user,
-        'password_form': PasswordChangeForm(request.user)
+        'password_form': PasswordChangeForm(request.user),
+        'completed_trips_count': completed_trips_count,
     }
     return render(request, 'accounts/profile.html', context)

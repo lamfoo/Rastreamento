@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    dashboard, VehicleViewSet, TripViewSet, FuelRecordViewSet,
+    dashboard, vehicles_list, trips_list, VehicleViewSet, TripViewSet, FuelRecordViewSet,
     ServiceRecordViewSet, TrackingDeviceViewSet
 )
 
@@ -16,5 +16,7 @@ app_name = 'vehicles'
 
 urlpatterns = [
     path('', dashboard, name='dashboard'),
+    path('vehicles/', vehicles_list, name='list'),
+    path('trips/', trips_list, name='trips_list'),
     path('api/', include(router.urls)),
 ]

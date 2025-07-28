@@ -141,7 +141,7 @@
                             <div class="col-md-4">
                                 <div class="card bg-info text-white">
                                     <div class="card-body text-center">
-                                        <h3>{{ user.trips.filter:status='completed'.count }}</h3>
+                                        <h3>{{ completed_trips_count|default:0 }}</h3>
                                         <small>Viagens Concluídas</small>
                                     </div>
                                 </div>

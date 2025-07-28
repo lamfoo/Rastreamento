@@ -126,7 +126,7 @@ def trips_report(request):
         }
     }
     
-    return render(request, 'reports/trips.html', context)
+    return render(request, 'reports/trips_report.html', context)
 
 
 @login_required

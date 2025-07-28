@@ -345,3 +345,78 @@ class TrackingDeviceViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+@login_required
+def vehicles_list(request):
+    """Lista todos os veículos"""
+    user = request.user
+    
+    # Filtrar veículos baseado no tipo de usuário
+    if user.user_type == 'driver':
+        vehicles = Vehicle.objects.filter(assigned_driver=user)
+    else:
+        vehicles = Vehicle.objects.all()
+    
+    # Filtros opcionais
+    status_filter = request.GET.get('status')
+    if status_filter:
+        vehicles = vehicles.filter(status=status_filter)
+    
+    search = request.GET.get('search')
+    if search:
+        vehicles = vehicles.filter(
+            Q(plate__icontains=search) |
+            Q(brand__icontains=search) |
+            Q(model__icontains=search)
+        )
+    
+    vehicles = vehicles.select_related('assigned_driver').order_by('plate')
+    
+    context = {
+        'vehicles': vehicles,
+        'status_choices': Vehicle.STATUS_CHOICES,
+        'current_status': status_filter,
+        'search_query': search,
+    }
+    
+    return render(request, 'vehicles/list.html', context)
+
+
+@login_required 
+def trips_list(request):
+    """Lista todas as viagens"""
+    user = request.user
+    
+    # Filtrar viagens baseado no tipo de usuário
+    if user.user_type == 'driver':
+        trips = Trip.objects.filter(driver=user)
+    else:
+        trips = Trip.objects.all()
+    
+    # Filtros opcionais
+    status_filter = request.GET.get('status')
+    if status_filter:
+        trips = trips.filter(status=status_filter)
+    
+    vehicle_filter = request.GET.get('vehicle')
+    if vehicle_filter:
+        trips = trips.filter(vehicle_id=vehicle_filter)
+    
+    trips = trips.select_related('vehicle', 'driver').order_by('-planned_start_time')
+    
+    # Obter veículos para o filtro
+    if user.user_type == 'driver':
+        vehicles_for_filter = Vehicle.objects.filter(assigned_driver=user)
+    else:
+        vehicles_for_filter = Vehicle.objects.all()
+    
+    context = {
+        'trips': trips,
+        'status_choices': Trip.STATUS_CHOICES,
+        'vehicles': vehicles_for_filter,
+        'current_status': status_filter,
+        'current_vehicle': vehicle_filter,
+    }
+    
+    return render(request, 'vehicles/trips_list.html', context)

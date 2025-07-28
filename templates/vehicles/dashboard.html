@@ -115,17 +115,17 @@
                     <div class="row">
                         {% if user.can_manage_vehicles %}
                         <div class="col-md-3 mb-3">
-                            <a href="#" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
-                                <i class="bi bi-plus-circle mb-2" style="font-size: 1.5rem;"></i>
-                                <span>Novo Veículo</span>
+                            <a href="{% url 'vehicles:list' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
+                                <i class="bi bi-truck mb-2" style="font-size: 1.5rem;"></i>
+                                <span>Ver Veículos</span>
                             </a>
                         </div>
                         {% endif %}
                         
                         <div class="col-md-3 mb-3">
-                            <a href="#" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
-                                <i class="bi bi-plus-square mb-2" style="font-size: 1.5rem;"></i>
-                                <span>Nova Viagem</span>
+                            <a href="{% url 'vehicles:trips_list' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
+                                <i class="bi bi-map mb-2" style="font-size: 1.5rem;"></i>
+                                <span>Ver Viagens</span>
                             </a>
                         </div>
                         

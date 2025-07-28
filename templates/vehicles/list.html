@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Veículos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-truck"></i> Lista de Veículos</h2>
+                <div>
+                    {% if user.can_manage_vehicles %}
+                    <a href="#" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Adicionar Veículo
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Buscar</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search_query|default:'' }}" 
+                                   placeholder="Placa, marca ou modelo...">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Todos os status</option>
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-search"></i> Filtrar
+                            </button>
+                            <a href="{% url 'vehicles:list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg"></i> Limpar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Veículos -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list"></i> Veículos 
+                        <span class="badge bg-primary">{{ vehicles.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if vehicles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Placa</th>
+                                    <th>Marca/Modelo</th>
+                                    <th>Ano</th>
+                                    <th>Status</th>
+                                    <th>Motorista</th>
+                                    <th>Localização</th>
+                                    <th>Última Atualização</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vehicle in vehicles %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ vehicle.plate }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ vehicle.brand }} {{ vehicle.model }}
+                                        {% if vehicle.color %}
+                                        <br><small class="text-muted">{{ vehicle.color }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ vehicle.year|default:'-' }}</td>
+                                    <td>
+                                        {% if vehicle.status == 'active' %}
+                                        <span class="badge bg-success">{{ vehicle.get_status_display }}</span>
+                                        {% elif vehicle.status == 'maintenance' %}
+                                        <span class="badge bg-warning">{{ vehicle.get_status_display }}</span>
+                                        {% elif vehicle.status == 'inactive' %}
+                                        <span class="badge bg-secondary">{{ vehicle.get_status_display }}</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">{{ vehicle.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if vehicle.assigned_driver %}
+                                        <i class="bi bi-person-fill text-primary"></i>
+                                        {{ vehicle.assigned_driver.get_full_name }}
+                                        {% else %}
+                                        <span class="text-muted">Não atribuído</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-geo-alt text-muted"></i>
+                                        <small class="text-muted">GPS ativo</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ vehicle.updated_at|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" title="Ver detalhes">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            {% if user.can_manage_vehicles %}
+                                            <button type="button" class="btn btn-outline-warning" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            {% endif %}
+                                            <a href="{% url 'tracking:live_map' %}?vehicle={{ vehicle.id }}" 
+                                               class="btn btn-outline-success" title="Rastrear">
+                                                <i class="bi bi-geo-alt"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-truck display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">Nenhum veículo encontrado</h4>
+                        <p class="text-muted">
+                            {% if search_query or current_status %}
+                            Tente ajustar os filtros de busca.
+                            {% else %}
+                            Não há veículos cadastrados no sistema.
+                            {% endif %}
+                        </p>
+                        {% if user.can_manage_vehicles and not search_query and not current_status %}
+                        <a href="#" class="btn btn-primary">
+                            <i class="bi bi-plus-lg"></i> Adicionar Primeiro Veículo
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit do formulário de filtro quando mudar o status
+    document.getElementById('status').addEventListener('change', function() {
+        this.form.submit();
+    });
+</script>
+{% endblock %} 

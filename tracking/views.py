@@ -78,12 +78,7 @@ def live_map(request):
         
         return JsonResponse(vehicles_data, safe=False)
     
-    # Renderizar template HTML
-    context = {
-        'vehicles': vehicles,
-    }
-    
-    return render(request, 'tracking/live_map.html', context) Obter última localização de cada veículo
+    # Renderizar template HTML - Obter última localização de cada veículo
     vehicles_data = []
     for vehicle in vehicles:
         if hasattr(vehicle, 'tracking_device'):
@@ -106,10 +101,8 @@ def live_map(request):
                     'fuel_level': last_location.fuel_level,
                 })
     
-    if request.headers.get('Accept') == 'application/json':
-        return JsonResponse({'vehicles': vehicles_data})
-    
     context = {
+        'vehicles': vehicles,
         'vehicles_data': vehicles_data,
     }
     

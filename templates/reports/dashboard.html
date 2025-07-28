@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Relatórios{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-bar-chart-fill"></i> Dashboard de Relatórios</h2>
+                <div>
+                    <a href="{% url 'reports:trips' %}" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-text"></i> Relatório de Viagens
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Gerais -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-truck display-4"></i>
+                    <h3 class="mt-2">{{ stats.total_vehicles }}</h3>
+                    <p class="mb-0">Veículos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-map display-4"></i>
+                    <h3 class="mt-2">{{ stats.total_trips }}</h3>
+                    <p class="mb-0">Total de Viagens</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle display-4"></i>
+                    <h3 class="mt-2">{{ stats.completed_trips }}</h3>
+                    <p class="mb-0">Concluídas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-clockwise display-4"></i>
+                    <h3 class="mt-2">{{ stats.in_progress_trips }}</h3>
+                    <p class="mb-0">Em Andamento</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-fuel-pump display-4"></i>
+                    <h3 class="mt-2">{{ stats.total_fuel_records }}</h3>
+                    <p class="mb-0">Registros Combustível</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-tools display-4"></i>
+                    <h3 class="mt-2">{{ stats.total_service_records }}</h3>
+                    <p class="mb-0">Serviços</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Viagens por Mês (Últimos 6 Meses)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="tripsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-fuel-pump-fill"></i> Combustível por Mês (Últimos 6 Meses)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="fuelChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo Mensal -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-calendar3"></i> Resumo Mensal</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mês</th>
+                                    <th>Viagens</th>
+                                    <th>Combustível (L)</th>
+                                    <th>Custo Combustível (MT)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trip_data in trips_by_month %}
+                                <tr>
+                                    <td>{{ trip_data.month }}</td>
+                                    <td>{{ trip_data.count }}</td>
+                                    <td>
+                                        {% for fuel_data in fuel_by_month %}
+                                            {% if fuel_data.month == trip_data.month %}
+                                                {{ fuel_data.total_quantity|floatformat:1|default:"0.0" }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% for fuel_data in fuel_by_month %}
+                                            {% if fuel_data.month == trip_data.month %}
+                                                {{ fuel_data.total_cost|floatformat:2|default:"0.00" }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        Nenhum dado disponível para os últimos 6 meses
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Dados para o gráfico de viagens
+    const tripsData = {{ trips_by_month|safe }};
+    const tripsLabels = tripsData.map(item => item.month);
+    const tripsValues = tripsData.map(item => item.count);
+
+    // Configuração do gráfico de viagens
+    const tripsCtx = document.getElementById('tripsChart').getContext('2d');
+    new Chart(tripsCtx, {
+        type: 'line',
+        data: {
+            labels: tripsLabels,
+            datasets: [{
+                label: 'Viagens',
+                data: tripsValues,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Dados para o gráfico de combustível
+    const fuelData = {{ fuel_by_month|safe }};
+    const fuelLabels = fuelData.map(item => item.month);
+    const fuelQuantities = fuelData.map(item => item.total_quantity || 0);
+    const fuelCosts = fuelData.map(item => item.total_cost || 0);
+
+    // Configuração do gráfico de combustível
+    const fuelCtx = document.getElementById('fuelChart').getContext('2d');
+    new Chart(fuelCtx, {
+        type: 'bar',
+        data: {
+            labels: fuelLabels,
+            datasets: [{
+                label: 'Quantidade (L)',
+                data: fuelQuantities,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Custo (MT)',
+                data: fuelCosts,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantidade (L)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Custo (MT)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+</script>
+{% endblock %} 

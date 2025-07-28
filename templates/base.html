@@ -166,7 +166,7 @@
             
             {% if user.can_manage_vehicles %}
             <li>
-                <a href="#" class="{% if 'vehicles' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'vehicles:list' %}" class="{% if 'list' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-truck"></i>
                     <span>Veículos</span>
                 </a>
@@ -181,7 +181,7 @@
             </li>
             
             <li>
-                <a href="#" class="{% if 'trips' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'vehicles:trips_list' %}" class="{% if 'trips_list' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-map"></i>
                     <span>Viagens</span>
                 </a>
