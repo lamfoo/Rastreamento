@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mapa em Tempo Real{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 70vh;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .vehicle-info {
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .status-active { background-color: #28a745; }
+    .status-inactive { background-color: #dc3545; }
+    .status-maintenance { background-color: #ffc107; }
+    
+    .map-controls {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-geo-alt"></i> Mapa em Tempo Real</h2>
+                <button class="btn btn-primary" onclick="refreshMap()">
+                    <i class="bi bi-arrow-clockwise"></i> Atualizar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="map-controls">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="vehicleFilter" class="form-label">Filtrar por Veículo:</label>
+                        <select class="form-select" id="vehicleFilter" onchange="filterVehicles()">
+                            <option value="">Todos os veículos</option>
+                            {% for vehicle in vehicles %}
+                            <option value="{{ vehicle.id }}">{{ vehicle.plate }} - {{ vehicle.brand }} {{ vehicle.model }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="statusFilter" class="form-label">Filtrar por Status:</label>
+                        <select class="form-select" id="statusFilter" onchange="filterVehicles()">
+                            <option value="">Todos os status</option>
+                            <option value="active">Ativo</option>
+                            <option value="inactive">Inativo</option>
+                            <option value="maintenance">Manutenção</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Opções:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showTrails" onchange="toggleTrails()">
+                            <label class="form-check-label" for="showTrails">
+                                Mostrar trajetos
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="map"></div>
+        </div>
+        
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-list-ul"></i> Veículos Online</h5>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    <div id="vehiclesList">
+                        {% for vehicle in vehicles %}
+                        <div class="vehicle-info" data-vehicle-id="{{ vehicle.id }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ vehicle.plate }}</strong><br>
+                                    <small class="text-muted">{{ vehicle.brand }} {{ vehicle.model }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="status-indicator status-{{ vehicle.status }}"></span>
+                                    <small>{{ vehicle.get_status_display }}</small>
+                                </div>
+                            </div>
+                            {% if vehicle.assigned_driver %}
+                            <div class="mt-2">
+                                <small><i class="bi bi-person"></i> {{ vehicle.assigned_driver.get_full_name }}</small>
+                            </div>
+                            {% endif %}
+                            <div class="mt-2">
+                                <small class="text-muted" id="lastUpdate-{{ vehicle.id }}">
+                                    <i class="bi bi-clock"></i> Carregando...
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let map;
+let vehicleMarkers = {};
+let vehicleTrails = {};
+let vehiclesData = [];
+
+// Inicializar mapa
+function initMap() {
+    // Centro em Maputo, Moçambique
+    map = L.map('map').setView([-25.9655, 32.5832], 12);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Carregar dados dos veículos
+    loadVehicleData();
+    
+    // Atualizar a cada 30 segundos
+    setInterval(loadVehicleData, 30000);
+}
+
+// Carregar dados dos veículos
+async function loadVehicleData() {
+    try {
+        const response = await fetch('/tracking/api/live-locations/');
+        if (response.ok) {
+            vehiclesData = await response.json();
+            updateVehicleMarkers();
+            updateVehiclesList();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar dados dos veículos:', error);
+    }
+}
+
+// Atualizar marcadores dos veículos
+function updateVehicleMarkers() {
+    vehiclesData.forEach(vehicle => {
+        if (vehicle.last_location) {
+            const lat = vehicle.last_location.latitude;
+            const lng = vehicle.last_location.longitude;
+            
+            // Criar ou atualizar marcador
+            if (vehicleMarkers[vehicle.id]) {
+                vehicleMarkers[vehicle.id].setLatLng([lat, lng]);
+            } else {
+                const icon = getVehicleIcon(vehicle.status);
+                const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+                
+                const popupContent = `
+                    <div>
+                        <strong>${vehicle.plate}</strong><br>
+                        ${vehicle.brand} ${vehicle.model}<br>
+                        <small>Status: ${vehicle.status_display}</small><br>
+                        ${vehicle.assigned_driver ? `<small>Motorista: ${vehicle.assigned_driver}</small><br>` : ''}
+                        <small>Velocidade: ${vehicle.last_location.speed || 0} km/h</small><br>
+                        <small>Última atualização: ${new Date(vehicle.last_location.timestamp).toLocaleString()}</small>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                vehicleMarkers[vehicle.id] = marker;
+            }
+        }
+    });
+}
+
+// Obter ícone baseado no status do veículo
+function getVehicleIcon(status) {
+    let color = '#007bff';
+    switch (status) {
+        case 'active':
+            color = '#28a745';
+            break;
+        case 'inactive':
+            color = '#dc3545';
+            break;
+        case 'maintenance':
+            color = '#ffc107';
+            break;
+    }
+    
+    return L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+}
+
+// Atualizar lista de veículos
+function updateVehiclesList() {
+    vehiclesData.forEach(vehicle => {
+        const lastUpdateElement = document.getElementById(`lastUpdate-${vehicle.id}`);
+        if (lastUpdateElement && vehicle.last_location) {
+            const lastUpdate = new Date(vehicle.last_location.timestamp);
+            const now = new Date();
+            const diffMinutes = Math.floor((now - lastUpdate) / 60000);
+            
+            let updateText = '';
+            if (diffMinutes < 1) {
+                updateText = 'Agora mesmo';
+            } else if (diffMinutes < 60) {
+                updateText = `${diffMinutes} min atrás`;
+            } else {
+                updateText = lastUpdate.toLocaleString();
+            }
+            
+            lastUpdateElement.innerHTML = `<i class="bi bi-clock"></i> ${updateText}`;
+        }
+    });
+}
+
+// Filtrar veículos
+function filterVehicles() {
+    const vehicleFilter = document.getElementById('vehicleFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    Object.keys(vehicleMarkers).forEach(vehicleId => {
+        const vehicle = vehiclesData.find(v => v.id == vehicleId);
+        const marker = vehicleMarkers[vehicleId];
+        
+        let show = true;
+        
+        if (vehicleFilter && vehicleId != vehicleFilter) {
+            show = false;
+        }
+        
+        if (statusFilter && vehicle && vehicle.status !== statusFilter) {
+            show = false;
+        }
+        
+        if (show) {
+            map.addLayer(marker);
+        } else {
+            map.removeLayer(marker);
+        }
+    });
+}
+
+// Alternar exibição de trajetos
+function toggleTrails() {
+    const showTrails = document.getElementById('showTrails').checked;
+    
+    if (showTrails) {
+        // Implementar exibição de trajetos
+        console.log('Mostrando trajetos...');
+    } else {
+        // Remover trajetos
+        Object.values(vehicleTrails).forEach(trail => {
+            map.removeLayer(trail);
+        });
+        vehicleTrails = {};
+    }
+}
+
+// Atualizar mapa
+function refreshMap() {
+    loadVehicleData();
+}
+
+// Inicializar quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+});
+</script>
+{% endblock %}

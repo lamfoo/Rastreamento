@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Rastreamento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-radar"></i> Dashboard de Rastreamento</h2>
+                <div>
+                    <a href="{% url 'tracking:live_map' %}" class="btn btn-primary">
+                        <i class="bi bi-geo-alt"></i> Mapa em Tempo Real
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Total de Veículos</div>
+                            <div class="text-lg fw-bold">{{ total_vehicles }}</div>
+                        </div>
+                        <i class="bi bi-truck fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Veículos Ativos</div>
+                            <div class="text-lg fw-bold">{{ active_vehicles }}</div>
+                        </div>
+                        <i class="bi bi-check-circle fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Alertas Ativos</div>
+                            <div class="text-lg fw-bold">{{ active_alerts.geofence|add:active_alerts.speed|add:active_alerts.maintenance }}</div>
+                        </div>
+                        <i class="bi bi-exclamation-triangle fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-75 small">Dispositivos Online</div>
+                            <div class="text-lg fw-bold">{{ active_vehicles }}</div>
+                        </div>
+                        <i class="bi bi-wifi fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Mapa Resumido -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-geo-alt"></i> Localização dos Veículos</h5>
+                </div>
+                <div class="card-body">
+                    <div id="summaryMap" style="height: 400px;"></div>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'tracking:live_map' %}" class="btn btn-primary">
+                        Ver Mapa Completo
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alertas -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-bell"></i> Alertas Recentes</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if active_alerts.geofence > 0 or active_alerts.speed > 0 or active_alerts.maintenance > 0 %}
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Resumo de Alertas</h6>
+                            <ul class="mb-0">
+                                {% if active_alerts.geofence > 0 %}
+                                <li>{{ active_alerts.geofence }} alerta(s) de geofence</li>
+                                {% endif %}
+                                {% if active_alerts.speed > 0 %}
+                                <li>{{ active_alerts.speed }} alerta(s) de velocidade</li>
+                                {% endif %}
+                                {% if active_alerts.maintenance > 0 %}
+                                <li>{{ active_alerts.maintenance }} alerta(s) de manutenção</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Nenhum alerta ativo no momento.
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Lista de veículos com status -->
+                    <h6 class="mt-3">Status dos Veículos</h6>
+                    {% for vehicle in vehicles %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                        <div>
+                            <strong>{{ vehicle.plate }}</strong><br>
+                            <small class="text-muted">{{ vehicle.brand }} {{ vehicle.model }}</small>
+                        </div>
+                        <div class="text-end">
+                            {% if vehicle.status == 'active' %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% elif vehicle.status == 'inactive' %}
+                                <span class="badge bg-danger">Inativo</span>
+                            {% else %}
+                                <span class="badge bg-warning">Manutenção</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Nenhum veículo encontrado.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ações Rápidas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Ações Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'tracking:live_map' %}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-geo-alt"></i><br>
+                                Mapa em Tempo Real
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'reports:dashboard' %}" class="btn btn-outline-success w-100 mb-2">
+                                <i class="bi bi-file-earmark-text"></i><br>
+                                Relatórios
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'vehicles:dashboard' %}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="bi bi-truck"></i><br>
+                                Gerenciar Veículos
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-warning w-100 mb-2" onclick="syncAllDevices()">
+                                <i class="bi bi-arrow-clockwise"></i><br>
+                                Sincronizar Dados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let summaryMap;
+
+// Inicializar mapa resumido
+function initSummaryMap() {
+    summaryMap = L.map('summaryMap').setView([-25.9655, 32.5832], 11);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(summaryMap);
+    
+    // Carregar posições dos veículos
+    loadVehiclePositions();
+}
+
+// Carregar posições dos veículos
+async function loadVehiclePositions() {
+    try {
+        const response = await fetch('/tracking/api/live-locations/');
+        if (response.ok) {
+            const vehicles = await response.json();
+            
+            vehicles.forEach(vehicle => {
+                if (vehicle.last_location) {
+                    const lat = vehicle.last_location.latitude;
+                    const lng = vehicle.last_location.longitude;
+                    
+                    let color = '#007bff';
+                    switch (vehicle.status) {
+                        case 'active':
+                            color = '#28a745';
+                            break;
+                        case 'inactive':
+                            color = '#dc3545';
+                            break;
+                        case 'maintenance':
+                            color = '#ffc107';
+                            break;
+                    }
+                    
+                    const icon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: ${color}; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [15, 15],
+                        iconAnchor: [7.5, 7.5]
+                    });
+                    
+                    const marker = L.marker([lat, lng], { icon: icon }).addTo(summaryMap);
+                    
+                    marker.bindPopup(`
+                        <strong>${vehicle.plate}</strong><br>
+                        ${vehicle.brand} ${vehicle.model}<br>
+                        Status: ${vehicle.status_display}
+                    `);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar posições dos veículos:', error);
+    }
+}
+
+// Sincronizar todos os dispositivos
+async function syncAllDevices() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    button.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i><br>Sincronizando...';
+    button.disabled = true;
+    
+    try {
+        // Aqui você pode implementar a chamada para sincronizar todos os dispositivos
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simular delay
+        
+        // Recarregar a página para mostrar dados atualizados
+        location.reload();
+    } catch (error) {
+        console.error('Erro ao sincronizar dispositivos:', error);
+        alert('Erro ao sincronizar dispositivos. Tente novamente.');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Inicializar quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    initSummaryMap();
+});
+</script>
+
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.text-lg {
+    font-size: 1.5rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Dashboard</h1>
+            <p class="text-muted">Visão geral do sistema de monitoramento veicular</p>
+        </div>
+        <div class="text-end">
+            <small class="text-muted">
+                <i class="bi bi-clock"></i>
+                Última atualização: <span id="lastUpdate"></span>
+            </small>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total de Veículos
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_vehicles }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-truck text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Veículos Ativos
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.active_vehicles }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Viagens em Andamento
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.active_trips }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-arrow-right-circle text-info" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total de Viagens
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_trips }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-map text-warning" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-lightning"></i>
+                        Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if user.can_manage_vehicles %}
+                        <div class="col-md-3 mb-3">
+                            <a href="#" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
+                                <i class="bi bi-plus-circle mb-2" style="font-size: 1.5rem;"></i>
+                                <span>Novo Veículo</span>
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-md-3 mb-3">
+                            <a href="#" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
+                                <i class="bi bi-plus-square mb-2" style="font-size: 1.5rem;"></i>
+                                <span>Nova Viagem</span>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'tracking:live_map' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
+                                <i class="bi bi-geo-alt mb-2" style="font-size: 1.5rem;"></i>
+                                <span>Mapa ao Vivo</span>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'reports:dashboard' %}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="min-height: 80px;">
+                                <i class="bi bi-file-earmark-text mb-2" style="font-size: 1.5rem;"></i>
+                                <span>Relatórios</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity and Alerts -->
+    <div class="row">
+        <!-- Recent Trips -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-clock-history"></i>
+                        Viagens Recentes
+                    </h6>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_trips %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Veículo</th>
+                                        <th>Motorista</th>
+                                        <th>Origem → Destino</th>
+                                        <th>Status</th>
+                                        <th>Data</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for trip in recent_trips %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ trip.vehicle.plate }}</strong><br>
+                                            <small class="text-muted">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</small>
+                                        </td>
+                                        <td>{{ trip.driver.get_full_name|default:trip.driver.username }}</td>
+                                        <td>
+                                            <small>
+                                                <i class="bi bi-geo-alt-fill text-success"></i> {{ trip.origin|truncatechars:20 }}<br>
+                                                <i class="bi bi-geo-fill text-danger"></i> {{ trip.destination|truncatechars:20 }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            {% if trip.status == 'completed' %}
+                                                <span class="badge bg-success">Concluída</span>
+                                            {% elif trip.status == 'in_progress' %}
+                                                <span class="badge bg-primary">Em Andamento</span>
+                                            {% elif trip.status == 'planned' %}
+                                                <span class="badge bg-warning">Planejada</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ trip.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>{{ trip.planned_start_time|date:"d/m/Y H:i" }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">Nenhuma viagem registrada ainda.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Alertas do Sistema
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Sistema Operacional</strong><br>
+                        Todos os sistemas estão funcionando normalmente.
+                    </div>
+                    
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-tools text-warning"></i>
+                                Alertas de Manutenção
+                            </div>
+                            <span class="badge bg-warning rounded-pill">{{ alerts.maintenance }}</span>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-fuel-pump text-danger"></i>
+                                Combustível Baixo
+                            </div>
+                            <span class="badge bg-danger rounded-pill">{{ alerts.fuel_low }}</span>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-speedometer2 text-primary"></i>
+                                Violações de Velocidade
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ alerts.speed_violations }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+    
+    .text-xs {
+        font-size: 0.7rem;
+    }
+    
+    .font-weight-bold {
+        font-weight: 700;
+    }
+    
+    .text-gray-800 {
+        color: #5a5c69;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Update timestamp
+    function updateTimestamp() {
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = now.toLocaleString('pt-BR');
+    }
+    
+    // Update timestamp on page load
+    updateTimestamp();
+    
+    // Update timestamp every minute
+    setInterval(updateTimestamp, 60000);
+    
+    // Auto-refresh data every 5 minutes
+    setInterval(function() {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}

@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Relatório de Viagens{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-file-earmark-text"></i> Relatório de Viagens</h2>
+                <div>
+                    <a href="{% url 'reports:dashboard' %}" class="btn btn-secondary me-2">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-download"></i> Exportar
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'reports:export_trips' 'csv' %}?{{ request.GET.urlencode }}">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'reports:export_trips' 'pdf' %}?{{ request.GET.urlencode }}">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-funnel"></i> Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="vehicle" class="form-label">Veículo</label>
+                    <select class="form-select" name="vehicle" id="vehicle">
+                        <option value="">Todos os veículos</option>
+                        {% for vehicle in vehicles %}
+                            <option value="{{ vehicle.id }}" {% if request.GET.vehicle == vehicle.id|stringformat:"s" %}selected{% endif %}>
+                                {{ vehicle.plate }} - {{ vehicle.brand }} {{ vehicle.model }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="driver" class="form-label">Motorista</label>
+                    <select class="form-select" name="driver" id="driver">
+                        <option value="">Todos os motoristas</option>
+                        {% for driver in drivers %}
+                            <option value="{{ driver.id }}" {% if request.GET.driver == driver.id|stringformat:"s" %}selected{% endif %}>
+                                {{ driver.get_full_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" name="status" id="status">
+                        <option value="">Todos os status</option>
+                        <option value="planned" {% if request.GET.status == 'planned' %}selected{% endif %}>Planejada</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>Em Andamento</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Concluída</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelada</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="start_date" class="form-label">Data Início</label>
+                    <input type="date" class="form-control" name="start_date" id="start_date" value="{{ request.GET.start_date }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="end_date" class="form-label">Data Fim</label>
+                    <input type="date" class="form-control" name="end_date" id="end_date" value="{{ request.GET.end_date }}">
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'reports:trips' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>{{ trips.count }}</h3>
+                    <small>Total de Viagens</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>{{ completed_trips }}</h3>
+                    <small>Viagens Concluídas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h3>{{ in_progress_trips }}</h3>
+                    <small>Em Andamento</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3>{{ total_distance|floatformat:1 }} km</h3>
+                    <small>Distância Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabela de Viagens -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="bi bi-table"></i> Viagens ({{ trips.count }} registros)</h5>
+        </div>
+        <div class="card-body">
+            {% if trips %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="tripsTable">
+                        <thead>
+                            <tr>
+                                <th>Veículo</th>
+                                <th>Motorista</th>
+                                <th>Origem</th>
+                                <th>Destino</th>
+                                <th>Data/Hora Planejada</th>
+                                <th>Data/Hora Real</th>
+                                <th>Status</th>
+                                <th>Distância</th>
+                                <th>Combustível</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trip in trips %}
+                            <tr>
+                                <td>
+                                    <strong>{{ trip.vehicle.plate }}</strong><br>
+                                    <small class="text-muted">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</small>
+                                </td>
+                                <td>{{ trip.driver.get_full_name }}</td>
+                                <td>{{ trip.origin }}</td>
+                                <td>{{ trip.destination }}</td>
+                                <td>
+                                    {{ trip.planned_start_time|date:"d/m/Y H:i" }}<br>
+                                    {% if trip.planned_end_time %}
+                                        <small class="text-muted">até {{ trip.planned_end_time|date:"d/m/Y H:i" }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trip.actual_start_time %}
+                                        {{ trip.actual_start_time|date:"d/m/Y H:i" }}<br>
+                                        {% if trip.actual_end_time %}
+                                            <small class="text-muted">até {{ trip.actual_end_time|date:"d/m/Y H:i" }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trip.status == 'planned' %}
+                                        <span class="badge bg-secondary">Planejada</span>
+                                    {% elif trip.status == 'in_progress' %}
+                                        <span class="badge bg-warning">Em Andamento</span>
+                                    {% elif trip.status == 'completed' %}
+                                        <span class="badge bg-success">Concluída</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trip.distance_km %}
+                                        {{ trip.distance_km|floatformat:1 }} km
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trip.fuel_consumed %}
+                                        {{ trip.fuel_consumed|floatformat:1 }} L
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#tripModal{{ trip.id }}">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        {% if user.can_manage_vehicles %}
+                                        <a href="{% url 'vehicles:dashboard' %}#trip-{{ trip.id }}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginação -->
+                {% if is_paginated %}
+                <nav aria-label="Navegação de páginas">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">Anterior</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Próximo</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">Nenhuma viagem encontrada</h4>
+                    <p class="text-muted">Tente ajustar os filtros ou adicionar novas viagens ao sistema.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modais para detalhes das viagens -->
+{% for trip in trips %}
+<div class="modal fade" id="tripModal{{ trip.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalhes da Viagem - {{ trip.vehicle.plate }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Informações Básicas</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Veículo:</strong></td>
+                                <td>{{ trip.vehicle.plate }} - {{ trip.vehicle.brand }} {{ trip.vehicle.model }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Motorista:</strong></td>
+                                <td>{{ trip.driver.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>{{ trip.get_status_display }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Trajeto</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Origem:</strong></td>
+                                <td>{{ trip.origin }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Destino:</strong></td>
+                                <td>{{ trip.destination }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Distância:</strong></td>
+                                <td>{{ trip.distance_km|default:"-"|floatformat:1 }} km</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6>Horários Planejados</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Início:</strong></td>
+                                <td>{{ trip.planned_start_time|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fim:</strong></td>
+                                <td>{{ trip.planned_end_time|date:"d/m/Y H:i"|default:"-" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Horários Reais</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Início:</strong></td>
+                                <td>{{ trip.actual_start_time|date:"d/m/Y H:i"|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fim:</strong></td>
+                                <td>{{ trip.actual_end_time|date:"d/m/Y H:i"|default:"-" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if trip.purpose or trip.notes %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        {% if trip.purpose %}
+                        <h6>Propósito</h6>
+                        <p>{{ trip.purpose }}</p>
+                        {% endif %}
+                        
+                        {% if trip.notes %}
+                        <h6>Observações</h6>
+                        <p>{{ trip.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Inicializar DataTable se disponível
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('tripsTable');
+    if (table && typeof DataTable !== 'undefined') {
+        new DataTable(table, {
+            pageLength: 25,
+            order: [[4, 'desc']], // Ordenar por data planejada
+            columnDefs: [
+                { orderable: false, targets: [9] } // Desabilitar ordenação na coluna de ações
+            ],
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
